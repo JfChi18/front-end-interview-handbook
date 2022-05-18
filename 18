@@ -1,0 +1,335 @@
+# Google
+## Hashtables:
+ Arguably the single most important data structure known to mankind. You should know how they work. Be able to implement one using only arrays in your favorite language, in about the space of one interview. 
+
+## Trees: 
+Know about trees, basic tree construction, traversal and manipulation algorithms.   
+Familiarize yourself with binary trees, n-ary trees, and trie-trees. 
+Be familiar with at least one type of balanced binary tree, whether it's a red/black tree, a splay tree or an AVL tree, and know how it's implemented. Understand tree traversal algorithms: BFS and DFS, and know the difference between inorder, postorder and preorder. 
+
+## Graphs:
+ Graphs are really important at Google.   
+ There are 3 basic ways to represent a graph in memory (objects and pointers, matrix, and adjacency list). Familiarize yourself with each representation and its pros + cons.    
+Basic graph traversal algorithms: breadth-first search and depth-first search.      
+Fancier algorithms : Dijkstra and A*. 
+
+#
+计题，给了基本的function框架，让写一个translator，要实现添加单词功能，两个语言之间的互相翻译功能，问了一些follow up，corner case的处理之类的，比较简单。 第二题是第一题的follow up，让把刚才双语translator拓展成多语言translator。如果两个语言之间没有直翻，但是有间接翻译（比如，a语言和b语言互翻，b和c互翻，但是a和c不互翻，那也算a和c互翻，可以找得到解）。
+
+我的思路是custom language class + hashmap + dfs穷举。找一个翻译的话找到就返回，找所有的话就返回list
+## Topological Sort
+Topological sorting for Directed Acyclic Graph (DAG) is a linear ordering of vertices such that for every directed edge u v, vertex u comes before v in the ordering. Topological Sorting for a graph is not possible if the graph is not a DAG.
+### [Job Scheduler](https://leetcode.com/problems/task-scheduler/)
+follow up： 如果跑在实际场景中会遇到什么corner case
+
+```python
+
+```
+### [Find All Possible Recipes from Given Supplies](https://leetcode.com/discuss/interview-question/1504849/Google-Onsite/1106795)
+recipes = ["bread"], ingredients = [["yeast","flour"]], supplies = ["yeast","flour","corn"]
+
+we can now draw the graph first. (Consider the graph directed from upper nodes to downwards)
+
+				yeast       flour
+					  \     /
+			meat      Bread
+			  \        /
+			  SandWhich
+For each recipe, count its non-available ingredients as in degree; Store (non-available ingredient, dependent recipes) as HashMap;a  
+Store all 0-in-degree recipes into a list as the starting points of topological sort;  
+Use topogical sort to decrease the in degree of recipes, whenever the in-degree reaches 0, add it to return list.
+```python
+class Recipe:
+    def __init__(self, name: str, rawIngredients, intermediateRecipeNames):
+        self.name = name
+        self.rawIngredients = rawIngredients
+        self.intermediateRecipeNames = intermediateRecipeNames
+        
+    def __str__(self):
+        return self.name
+
+class Solution:
+    
+    def __init__(self, recipes: 'List[Recipe]') -> None:
+        # DAG: ingredients --> receipes
+        self.ingredientMap = defaultdict(set)
+        # default indegree is 0
+        self.recipeIndegree = defaultdict(int)
+        # Create Gragh and add indegree
+        for recipe in recipes:
+            for ingredient in recipe.rawIngredients:
+                self.ingredientMap[ingredient].add(recipe)
+                self.recipeIndegree[recipe] += 1
+            for intermediateRecipeName in recipe.intermediateRecipeNames:
+                self.ingredientMap[intermediateRecipeName].add(recipe)
+                self.recipeIndegree[recipe] += 1
+            
+    def getRecipes(self, ingredients: 'List[str]') -> 'List[Recipe]':
+        recipesMet = []
+        
+        recipeIndegree = self.recipeIndegree.copy()
+        zeroIndegreeRecipes = []
+        # for all recipes, it would have indegree of 0 
+        # so that it can be cooked
+        #Use topogical sort to decrease the in degree of recipes, whenever the in-degree reaches 0, add it to return list
+        for ingredient in ingredients:
+            for recipeToReduce in self.ingredientMap[ingredient]:
+                recipeIndegree[recipeToReduce] -= 1
+                if recipeIndegree[recipeToReduce] == 0:
+                    zeroIndegreeRecipes.append(recipeToReduce)
+        
+        while zeroIndegreeRecipes:
+            recipeMet = zeroIndegreeRecipes.pop()
+            recipesMet.append(recipeMet)
+            
+            for recipeToReduce in self.ingredientMap[recipeMet.name]:
+                recipeIndegree[recipeToReduce] -= 1
+                if recipeIndegree[recipeToReduce] == 0:
+                    zeroIndegreeRecipes.append(recipeToReduce)
+             
+        return recipesMet
+            
+r1 = Recipe("Bread", ["Flour", "Yeast"], [])        
+r2 = Recipe("Ham and Cheese", ["Ham", "Cheese"], ["Bread"])        
+r3 = Recipe("Caprese Salad", ["Mozzrela", "Tomatoes"], [])        
+solution = Solution([r1, r2, r3])
+print(", ".join(str(x) for x in solution.getRecipes(["Ham", "Cheese", "Flour", "Yeast",  "Tomatoes"])))
+        
+        
+        
+        
+        
+```
+### [695.](https://www.techiedelight.com/replace-occurrences-of-0-surrounded-by-1-matrix/)
+给一个2d矩阵，0和1分别代表水和地，求最大地的面积。第二问：如果一个水被周围8个地环着，那么这个水就变成湖了，湖也算做一块地的面积，求最大地的面积。dfs秒了。感觉是lc‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‌‍‍上的题，不只是8包裹
+```python
+class Solution(object):
+    def maxAreaOfIsland(self, grid):
+        max_num=0
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j]==1: # 当有陆地时，深度搜索，直到满足边界，搜取完全后加1
+                    max_num = max(self.dfs(grid, i, j), max_num)
+        return max_num
+                        
+    def dfs(self, grid, i, j):
+        # 边界条件
+        if not (0<=i<len(grid)) or not (0<=j<len(grid[0])) or grid[i][j]==0: return 0
+        # 将搜素过的标记为'0'
+        grid[i][j]=0
+        count = 1
+        # 向其他四个方向搜索
+        count += self.dfs(grid, i-1, j)
+        count += self.dfs(grid, i+1, j)
+        count += self.dfs(grid, i, j-1)
+        count += self.dfs(grid, i, j+1)
+        return count
+```
+
+### [Friend Host]()
+
+Union Find 解决， follow up: 怎么优化 time complexity
+
+```python
+
+```
+### [Meeting room]()
+地理出现的那个面经题， 先写了sweep line， 后用priority queue优化了
+https://leetcode.com/discuss/interview-question/1566515/GoogleorOnsiteorBusiest-meeting-room/1143254
+```python
+class Solution:
+    """
+    @param intervals: an array of meeting time intervals
+    @return: the minimum number of conference rooms required
+    """
+    def minMeetingRooms(self, intervals):
+        start = sorted([i.start for i in intervals])
+        end = sorted([i.end for i in intervals])
+
+        res, count = 0, 0
+        s, e = 0, 0
+        while s < len(intervals):
+            if start[s] < end[e]:
+                s += 1
+                count += 1
+            else:
+                e += 1
+                count -= 1
+            res = max(res, count)
+        return res
+```
+### [Calculate Total Wait Time](https://leetcode.com/discuss/interview-question/1920662/Google-or-Phone-or-Calculate-Total-Wait-Time)
+具体是银行有n个agent给客户做service，客户需要一个一个来做service，每个service的时长是由客户决定的，目前前面有m个客户(m个客户的service时长作为输入)，你是第m+_1个到的，求需要等多长时间轮到你去service.
+https://leetcode.com/discuss/interview-question/1895536/google-phone-interview-time-to-wait-for-agent
+```python
+def wait_time(N, M, T):
+    """N agents with serving times T, M customers
+    """
+    if M < N:
+        return 0
+
+    import heapq
+
+    # put all agents busy
+    agent_times = [(t, i) for i, t in enumerate(T)]
+    heapq.heapify(agent_times)
+
+    # serve all other (M - N) customers with the agent finishes first
+    for _ in range(M - N):
+        t, i = heapq.heappop(agent_times)
+        heapq.heappush(agent_times, (t + T[i], i))
+
+    # the next available agent working time is the wait time for C
+    return agent_times[0][0]
+```
+### []()
+有一群小伙伴在不同位置，中午约吃饭，附近有好几个cafe, 返回最快所有人聚首的时间。 给的input有三个param: 人的位置 List[int] , Cafe的位置List[Int], Connection, 都是pair 表明两个地方是否相连 List[List[Int]]
+开头确认了一下是不是人和CAFE所在的位置一定在connection里 回答是不一定，如果达不成就return nil
+我用的是BFS解的，通过connection构图
+init的时候初始点是所有人的位置，并用index作为当前小伙伴的id,  用一个visited map记录每个不同小伙伴经过的地方，key是人的index， value是个set, 然后一个visited_cafe来记录每个cafe被几个人经过
+当第一个cafe被len(people)访问过的时候返回当前的‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‌‍‍步数，当queue遍历完则返回nil
+```python
+
+```
+
+### [restaurant-wait-list](https://leetcode.com/discuss/interview-question/1779091/google-phone-interview-usa-restaurant-wait-list)
+https://leetcode.com/discuss/interview-question/1779091/google-phone-interview-usa-restaurant-wait-list
+```python
+
+```
+
+### [1723. Find Minimum Time to Finish All Jobs](https://leetcode.com/problems/find-minimum-time-to-finish-all-jobs/)
+
+有四个工作，分配个两个worker，每个workēr对应每个task的cost记录在数组中.求将工作平均分配，最小的cost是多少。知道要用dp求解?  
+sort and twopointer  
+ 用greedy呢？用maxheap,保存每个 (abs(taskcost for A - taskcost for B)）然后每次优先给cost差值最大并且cost小的那个work安排这个工作。
+> diffs = [(task[A cost] - task[B cost], task) for task in tasks] # A, B是两个工人
+diffs.sort()
+选最小的两个就是A做的
+
+```python
+
+
+```
+### [R](https://leetcode.com/discuss/interview-question/401348/Google-Phone-Interview/360987)
+题是给用户和网址和时间的边，
+第一问是建图  
+dijkstra吧？蛮经典的。建图用邻接表，bfs如果要最短时间的话需要pq。第二问用bracktrack。需要环检测
+面试官说了用户和网址都是node，所以u1-w1, w1-u2这是两条边。但是u1-w1-u2和u1-w2-u2不算u尼克  
+第二题是求用户a和用户b间的u尼克路径。最后时间也没用上
+求多少条不同路径。检环还是需要的，检环怎么检
+你可以把时间当作是路径的权重啊。要求时间最短的路径。
+环检测有标准写法的  
+
+```python
+
+
+```
+#
+##
+### [200.Number of isalnd]()
+
+```python
+
+
+```
+#
+## Interval
+
+### [57. Insert Interval](https://leetcode.com/problems/insert-interval/)
+```python
+class Solution:
+    def insert(self, intervals: List[List[int]], newInterval: List[int]) -> List[List[int]]:
+        res = []
+        
+        for i in range(len(intervals)):
+            if newInterval[1] < intervals[i][0]:
+                res.append(newInterval)
+                return res + intervals[i:]
+            elif newInterval[0] >intervals[i][1]:
+                res.append(intervals[i])
+            else:
+                newInterval = [min(newInterval[0],intervals[i][0]),max(newInterval[1],intervals[i][1])]
+        
+```
+### [299. Bulls and Cows](https://leetcode.com/problems/bulls-and-cows/)
+    提目是猜词给反馈。给一个目标字符串，含无重复乱序英文大写字母，再给一个用户猜测的等长字符串。要求我们写算法来给用户的猜测做反馈。
+    规则是如果猜的字在目标里且下标也正确则为对，
+    在目标里但下标不正确则为中，
+    不在目标里则为错
+    输入参数1 哦哈啊嘿哟  
+    输入参数2 呃哟啊嘻吧
+    样例输出   错中对错错
+    用好数据结构逐个给出答案即可。
+    followup：目标字符串有重复字母，且规则发生变动，
+    （猜测的字和目标的字从左往右最近的字匹配），
+    每次当 猜测的字和目标的字发生匹配，无论猜没猜中位置，都会把目标字给蒙住，之后不再能使用。例如：
+    哦啊啊哦啊哦
+    哦哦啊哦啊哦
+    对中对中对错
+    还是一样，想好数据结构，然后考验的是否能清晰地做好条件判断。感觉面试时还是挺容易糊涂的，因为有好几个条件分支。
+    楼主有漏掉一种小情况（还被举例提醒）（其实是误解了题意），有打错语法细节，但是都很快纠正。面试官表示别担心‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‌‍‍，你已经很好了，算法什么的都很好。
+```python
+
+
+```
+
+#
+## Tree
+### [Tree traversal return leaf sum]()
+1. 给一个文件系统，python的字典形式（面试官用的hashmap），里边的key有文件的类别（文件夹/文件）和大小，文件夹类型里有一个list里边存了属于它的文件/文件夹，文件直接给出size，文件夹没有，现在随意给出一个文件/文件夹号，求size。在一个类似google doc上写的，写完之后面试官让我过一遍自己的代码，然后我终于发现了错误，但解决方法不是最优，面试官提醒了下才写出‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‌‍‍来更好的方法。
+2. 说如果每次计算文件夹size都要重复所有的计算过程，比如文件夹1中包含文件夹2，但基于我写出来的代码，如果要分别知道文件夹1和文件夹2的大小，要计算一遍1，又要计算一遍2，问有没有什么优化
+每个节点只需要visit一次
+```python
+
+
+```
+
+### [968. Binary Tree Cameras](https://leetcode.com/problems/binary-tree-cameras/)
+
+```python
+
+
+```
+
+#
+### [283. Move Zeroes](https://leetcode.com/problems/move-zeroes/)
+要求minimize the total number of operations
+```python
+class Solution:
+    def moveZeroes(self, nums: List[int]) -> None:
+        count=0
+        index=0
+        length=len(nums)
+        while count<length:
+            if nums[count]!=0:
+                temp=nums[count]
+                nums[count]=nums[index]
+                nums[index]=temp
+                index+=1
+            count+=1
+
+```
+
+#
+## Design
+### [Design a restaurant queue](https://leetcode.com/discuss/interview-question/1546595/google-full-cycle)
+
+```python
+
+
+```
+
+### [707. Design Linked List](https://leetcode.com/problems/design-linked-list/)
+
+```python
+
+
+```
+
+
+#
+## BQ
+跟地理看到的差不多，leadship, conflict, how to help you teammate  
+啥motivate你好好工作 和 不常见的题目怎么激励你队友帮你（答share credits和objective to make our product better）‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‌‍‍  
+User First，Care your teammates这种
